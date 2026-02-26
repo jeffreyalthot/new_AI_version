@@ -326,15 +326,15 @@ def euclidean_distance(a: Tuple[float, float, float], b: Tuple[float, float, flo
     return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2)
 
 
-def run_demo(realtime_seconds: float = 6.0, tick_interval: float = 0.1, seed: int = 42) -> None:
-    """Exécute la simulation en continu temps réel pendant une durée donnée."""
+def run_demo(realtime_seconds: Optional[float] = None, tick_interval: float = 0.1, seed: int = 42) -> None:
+    """Exécute la simulation en continu temps réel, sans limite par défaut."""
     random.seed(seed)
     world = World3D()
     print("=== Monde 3D IA (temps réel) ===")
 
     start = time.time()
     last_tick = start
-    while time.time() - start < realtime_seconds:
+    while realtime_seconds is None or time.time() - start < realtime_seconds:
         now = time.time()
         elapsed = now - last_tick
         last_tick = now
