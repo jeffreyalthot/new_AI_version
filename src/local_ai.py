@@ -442,6 +442,94 @@ class World3D:
         }
 
 
+
+@dataclass
+class MatrixTerminal:
+    """Terminal interactif pour explorer la matrice locale du monde réel simulé."""
+
+    world: World3D
+
+    def menu_options(self) -> List[Tuple[str, str]]:
+        return [
+            ("1", "Discovery matrix connection"),
+            ("2", "Discovery fonction"),
+            ("3", "Discovery commande"),
+            ("4", "Observer un tick espace-temps"),
+            ("0", "Quitter"),
+        ]
+
+    def display_menu(self) -> None:
+        print("\n=== Terminal matrice (interaction avec l'espace-temps) ===")
+        for key, label in self.menu_options():
+            print(f"[{key}] {label}")
+
+    def select_option(self, selection: str) -> Dict:
+        dispatch = {
+            "1": self.discovery_matrix_connection,
+            "2": self.discovery_fonction,
+            "3": self.discovery_commande,
+            "4": self.observe_spacetime_tick,
+        }
+        action = dispatch.get(selection)
+        if not action:
+            return {"error": "Option inconnue", "selection": selection}
+        return action()
+
+    def discovery_matrix_connection(self) -> Dict:
+        """Découvre les connexions disponibles vers la matrice locale."""
+        endpoints = [endpoint.to_dict() for endpoint in self.world.discover_matrix_endpoints()]
+        protocols = sorted({endpoint["protocol"] for endpoint in endpoints})
+        return {
+            "mode": "discovery_matrix_connection",
+            "connections": endpoints,
+            "protocols": protocols,
+            "count": len(endpoints),
+        }
+
+    def discovery_fonction(self) -> Dict:
+        """Expose les fonctions explorables du terminal matrice."""
+        return {
+            "mode": "discovery_fonction",
+            "functions": [
+                "discovery_matrix_connection",
+                "discovery_fonction",
+                "discovery_commande",
+                "observe_spacetime_tick",
+            ],
+            "description": "Le terminal découvre dynamiquement les fonctions de la matrice locale.",
+        }
+
+    def discovery_commande(self) -> Dict:
+        """Fournit les commandes opérables en interaction avec l'espace-temps."""
+        return {
+            "mode": "discovery_commande",
+            "commands": {
+                "connect": "Établir un lien binaire avec la matrice locale",
+                "scan": "Scanner les endpoints exposés dans la matrice",
+                "tick": "Observer la réponse du monde à un pas de temps",
+            },
+            "interaction": "L'interaction se fait avec l'espace-temps lui-même via les ticks du monde.",
+        }
+
+    def observe_spacetime_tick(self) -> Dict:
+        """Observe un état du monde en temps réel (un tick)."""
+        state = self.world.step(elapsed_seconds=1.0)
+        return {
+            "mode": "observe_spacetime_tick",
+            "state": state,
+        }
+
+    def run(self) -> None:
+        """Boucle interactive avec options sélectionnables par numéro."""
+        while True:
+            self.display_menu()
+            selection = input("Choix > ").strip()
+            if selection == "0":
+                print("Fermeture du terminal matrice.")
+                break
+            result = self.select_option(selection)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+
 def clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
     return max(minimum, min(maximum, value))
 
@@ -480,5 +568,13 @@ def run_demo(realtime_seconds: Optional[float] = None, tick_interval: float = 0.
         time.sleep(tick_interval)
 
 
+def run_matrix_terminal(seed: int = 42) -> None:
+    """Lance un terminal interactif de découverte de matrice."""
+    random.seed(seed)
+    world = World3D()
+    terminal = MatrixTerminal(world=world)
+    terminal.run()
+
+
 if __name__ == "__main__":
-    run_demo()
+    run_matrix_terminal()
