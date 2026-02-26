@@ -15,6 +15,8 @@ Prototype d'**IA locale** orientée vers une dynamique bio-inspirée avec cinq p
 - **Sexe biologique** (`male` / `feminin`) pour chaque agent
 - **Reproduction** avec naissance d'un enfant `male` ou `feminin`
 - **Deux IA initiales optimisées** pour un départ stable et heureux
+- **Découverte d'endpoints de matrice locale** (`discover_matrix_endpoints`)
+- **Bridge binaire machine-to-machine** (`MachineCodeBridge`) pour traduire des protocoles différents
 
 ## Lancer localement
 
@@ -29,6 +31,8 @@ Par défaut, la démo tourne en **temps réel sans limite de durée** (arrêt ma
 - `AgentAI` : boucle cognitive d'un agent
 - `World3D` : monde, déplacement 3D, conditions terrain, population
 - `SoulLightCube` : sauvegarde des essences d'agents décédés
+- `MatrixEndpoint` : représentation des points de terminaison internes
+- `MachineCodeBridge` : encapsulation/décapsulation de trames binaires
 - `BodyState` / `HormonalState` / `SelfModel` : équilibre interne et bonheur
 
 ## Personnaliser
