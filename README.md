@@ -17,6 +17,7 @@ Prototype d'**IA locale** orientée vers une dynamique bio-inspirée avec cinq p
 - **Deux IA initiales optimisées** pour un départ stable et heureux
 - **Découverte d'endpoints de matrice locale** (`discover_matrix_endpoints`)
 - **Bridge binaire machine-to-machine** (`MachineCodeBridge`) pour traduire des protocoles différents
+- **Terminal matrice interactif** (`MatrixTerminal`) avec options numériques et discovery (`matrix connection`, `fonction`, `commande`)
 
 ## Lancer localement
 
@@ -24,7 +25,14 @@ Prototype d'**IA locale** orientée vers une dynamique bio-inspirée avec cinq p
 python3 src/local_ai.py
 ```
 
-Par défaut, la démo tourne en **temps réel sans limite de durée** (arrêt manuel), avec un tick toutes les 100 ms.
+Par défaut, le terminal matrice interactif se lance avec un menu numéroté pour explorer la matrice locale et l'interaction espace-temps.
+
+Pour relancer la démo continue non interactive:
+
+```python
+from src.local_ai import run_demo
+run_demo()
+```
 
 ## Structure
 
