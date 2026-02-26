@@ -113,6 +113,70 @@ class SoulLightCube:
 
 
 @dataclass
+class MatrixEndpoint:
+    """Point de terminaison logique exposé par la simulation."""
+
+    endpoint_id: str
+    protocol: str
+    kind: str
+    address: str
+    metadata: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Dict[str, str]]:
+        return {
+            "endpoint_id": self.endpoint_id,
+            "protocol": self.protocol,
+            "kind": self.kind,
+            "address": self.address,
+            "metadata": self.metadata,
+        }
+
+
+@dataclass
+class MachineCodeBridge:
+    """Pont de communication binaire entre protocoles hétérogènes.
+
+    Le bridge n'utilise pas de langage naturel: il sérialise les trames
+    en binaire (`utf-8` + en-tête) pour simuler un canal de plus bas niveau.
+    """
+
+    source_protocol: str
+    target_protocol: str
+    frame_version: int = 1
+
+    def encode_frame(self, opcode: int, payload: Dict) -> bytes:
+        serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        header = bytes((self.frame_version & 0xFF, opcode & 0xFF)) + len(serialized).to_bytes(2, "big")
+        return header + serialized
+
+    def decode_frame(self, frame: bytes) -> Dict:
+        if len(frame) < 4:
+            raise ValueError("Frame trop courte")
+
+        version = frame[0]
+        opcode = frame[1]
+        declared_len = int.from_bytes(frame[2:4], "big")
+        payload = frame[4:]
+
+        if version != self.frame_version:
+            raise ValueError(f"Version de frame incompatible: {version}")
+        if declared_len != len(payload):
+            raise ValueError("Longueur de payload invalide")
+
+        return {
+            "version": version,
+            "opcode": opcode,
+            "payload": json.loads(payload.decode("utf-8")),
+            "source_protocol": self.source_protocol,
+            "target_protocol": self.target_protocol,
+        }
+
+    def translate(self, opcode: int, payload: Dict) -> Dict:
+        """Encode puis décode une trame pour simuler la traduction inter-systèmes."""
+        return self.decode_frame(self.encode_frame(opcode=opcode, payload=payload))
+
+
+@dataclass
 class AgentAI:
     name: str
     sex: str
@@ -226,6 +290,50 @@ class World3D:
             ]
 
         self.ensure_initial_pair()
+
+    def discover_matrix_endpoints(self) -> List[MatrixEndpoint]:
+        """Expose des endpoints internes utilisables comme "matrice" de ce monde."""
+        endpoints = [
+            MatrixEndpoint(
+                endpoint_id="world://state-stream",
+                protocol="world-state/v1",
+                kind="stream",
+                address="/world/state",
+                metadata={"description": "Flux d'état du monde à chaque tick"},
+            ),
+            MatrixEndpoint(
+                endpoint_id="world://reproduction-engine",
+                protocol="bio-sync/v1",
+                kind="service",
+                address="/world/reproduction",
+                metadata={"description": "Mécanisme de reproduction biologique simulée"},
+            ),
+            MatrixEndpoint(
+                endpoint_id="world://soul-cube-archive",
+                protocol="soul-archive/v1",
+                kind="store",
+                address="/world/souls",
+                metadata={"description": "Archive des essences après décès"},
+            ),
+        ]
+
+        for agent in self.agents:
+            endpoints.append(
+                MatrixEndpoint(
+                    endpoint_id=f"agent://{agent.name}",
+                    protocol="agent-core/v1",
+                    kind="node",
+                    address=f"/agents/{agent.name}",
+                    metadata={"sex": agent.sex, "alive": str(agent.alive).lower()},
+                )
+            )
+
+        return endpoints
+
+    def machine_link(self, external_protocol: str, opcode: int, payload: Dict) -> Dict:
+        """Crée un lien machine-to-machine pour parler à la matrice locale."""
+        bridge = MachineCodeBridge(source_protocol=external_protocol, target_protocol="world-state/v1")
+        return bridge.translate(opcode=opcode, payload=payload)
 
     def ensure_initial_pair(self) -> None:
         """Force les 2 premiers individus à être un mâle puis une femelle."""
@@ -350,7 +458,16 @@ def run_demo(realtime_seconds: Optional[float] = None, tick_interval: float = 0.
     """Exécute la simulation en continu temps réel, sans limite par défaut."""
     random.seed(seed)
     world = World3D()
+    endpoints = [endpoint.to_dict() for endpoint in world.discover_matrix_endpoints()]
     print("=== Monde 3D IA (temps réel) ===")
+    print(json.dumps({"discovered_endpoints": endpoints}, ensure_ascii=False))
+
+    handshake = world.machine_link(
+        external_protocol="unknown-matrix-protocol/v9",
+        opcode=1,
+        payload={"command": "handshake", "capabilities": ["binary-frame", "state-sync"]},
+    )
+    print(json.dumps({"machine_handshake": handshake}, ensure_ascii=False))
 
     start = time.time()
     last_tick = start
