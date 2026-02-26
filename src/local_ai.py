@@ -225,6 +225,26 @@ class World3D:
                 AgentAI(name="AI_Origin_F", sex="feminin", position=(12.0, 10.0, 2.0)),
             ]
 
+        self.ensure_initial_pair()
+
+    def ensure_initial_pair(self) -> None:
+        """Force les 2 premiers individus à être un mâle puis une femelle."""
+        initial_specs = (
+            ("AI_Origin_M", "male", (10.0, 10.0, 2.0)),
+            ("AI_Origin_F", "feminin", (12.0, 10.0, 2.0)),
+        )
+
+        for index, (default_name, required_sex, default_position) in enumerate(initial_specs):
+            if len(self.agents) <= index:
+                self.agents.append(AgentAI(name=default_name, sex=required_sex, position=default_position))
+                continue
+
+            if self.agents[index].sex != required_sex:
+                self.agents[index].sex = required_sex
+
+            if not self.agents[index].name:
+                self.agents[index].name = default_name
+
     def step(self, elapsed_seconds: float = 1.0) -> Dict:
         self.tick += 1
         updates = []
