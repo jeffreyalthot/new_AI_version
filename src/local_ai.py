@@ -101,7 +101,7 @@ class SoulLightCube:
         essence = {
             "name": agent.name,
             "sex": agent.sex,
-            "age": agent.age,
+            "age_seconds": round(agent.age_seconds, 3),
             "happiness": round(agent.self_model.happiness, 3),
             "confidence": round(agent.self_model.confidence, 3),
             "coherence": round(agent.self_model.coherence, 3),
@@ -122,15 +122,20 @@ class AgentAI:
     self_model: SelfModel = field(default_factory=SelfModel)
     memory: List[Dict] = field(default_factory=list)
     alive: bool = True
-    age: int = 0
-    cooldown_reproduction: int = 0
+    age_seconds: float = 0.0
+    cooldown_reproduction: float = 0.0
 
-    def step(self, sensory_input: Dict[str, float], terrain_factor: float = 1.0) -> Dict:
+    def step(
+        self,
+        sensory_input: Dict[str, float],
+        terrain_factor: float = 1.0,
+        elapsed_seconds: float = 1.0,
+    ) -> Dict:
         """Un pas cognitif avec continuité temporelle."""
         if not self.alive:
             return {"name": self.name, "alive": False}
 
-        self.age += 1
+        self.age_seconds += elapsed_seconds
         novelty = sensory_input.get("novelty", 0.0)
         external_stress = sensory_input.get("stress", 0.0)
 
@@ -140,7 +145,7 @@ class AgentAI:
         reward = self.compute_internal_reward()
 
         snapshot = {
-            "t": self.age,
+            "t_seconds": round(self.age_seconds, 3),
             "input": sensory_input,
             "actions": actions,
             "reward": reward,
@@ -151,7 +156,7 @@ class AgentAI:
         self.self_model.update(self.body, self.hormones, self.memory, self.alive)
 
         if self.cooldown_reproduction > 0:
-            self.cooldown_reproduction -= 1
+            self.cooldown_reproduction = max(0.0, self.cooldown_reproduction - elapsed_seconds)
 
         if self.body.energy < 0.05 and self.body.hydration < 0.05:
             self.alive = False
@@ -160,7 +165,7 @@ class AgentAI:
             "name": self.name,
             "sex": self.sex,
             "alive": self.alive,
-            "age": self.age,
+            "age_seconds": round(self.age_seconds, 3),
             "actions": actions,
             "reward": round(reward, 3),
             "body": {
@@ -220,7 +225,7 @@ class World3D:
                 AgentAI(name="AI_Origin_F", sex="feminin", position=(12.0, 10.0, 2.0)),
             ]
 
-    def step(self) -> Dict:
+    def step(self, elapsed_seconds: float = 1.0) -> Dict:
         self.tick += 1
         updates = []
         births = []
@@ -234,7 +239,7 @@ class World3D:
                 "stress": random.random() * 0.35,
             }
             terrain_factor = self.sample_terrain_effort(agent.position)
-            state = agent.step(sensory, terrain_factor=terrain_factor)
+            state = agent.step(sensory, terrain_factor=terrain_factor, elapsed_seconds=elapsed_seconds)
             if state["alive"]:
                 self.move_agent(agent, state["actions"]["move"])
             else:
@@ -269,7 +274,7 @@ class World3D:
         agent.position = (x, y, z)
 
     def try_reproduction(self) -> Optional[Dict]:
-        viable = [a for a in self.agents if a.alive and a.age >= 12 and a.cooldown_reproduction == 0]
+        viable = [a for a in self.agents if a.alive and a.age_seconds >= 12 and a.cooldown_reproduction == 0]
         males = [a for a in viable if a.sex == "male"]
         females = [a for a in viable if a.sex == "feminin"]
         if not males or not females:
@@ -297,8 +302,8 @@ class World3D:
         child.self_model.coherence = clamp((father.self_model.coherence + mother.self_model.coherence) / 2)
         child.self_model.happiness = clamp((father.self_model.happiness + mother.self_model.happiness) / 2)
 
-        father.cooldown_reproduction = 20
-        mother.cooldown_reproduction = 25
+        father.cooldown_reproduction = 20.0
+        mother.cooldown_reproduction = 25.0
         self.agents.append(child)
 
         return {
@@ -328,8 +333,12 @@ def run_demo(realtime_seconds: float = 6.0, tick_interval: float = 0.1, seed: in
     print("=== Monde 3D IA (temps réel) ===")
 
     start = time.time()
+    last_tick = start
     while time.time() - start < realtime_seconds:
-        state = world.step()
+        now = time.time()
+        elapsed = now - last_tick
+        last_tick = now
+        state = world.step(elapsed_seconds=elapsed)
         print(json.dumps(state, ensure_ascii=False))
         time.sleep(tick_interval)
 
