@@ -22,7 +22,7 @@ Prototype d'**IA locale** orientée vers une dynamique bio-inspirée avec cinq p
 python3 src/local_ai.py
 ```
 
-Par défaut, la démo tourne en **temps réel** pendant ~6 secondes avec un tick toutes les 100 ms.
+Par défaut, la démo tourne en **temps réel sans limite de durée** (arrêt manuel), avec un tick toutes les 100 ms.
 
 ## Structure
 
